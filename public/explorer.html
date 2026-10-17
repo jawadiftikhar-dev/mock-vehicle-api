@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Explorer · Fleet Live</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+<header class="app-header">
+  <div class="brand">
+    <a class="brand-logo" href="/" aria-label="Home">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+           stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 13h2l2-5h10l2 5h2"/><path d="M5 13v5h14v-5"/>
+        <circle cx="8" cy="18" r="2"/><circle cx="16" cy="18" r="2"/>
+      </svg>
+    </a>
+    <div>
+      <h1><a href="/">Fleet Live</a></h1>
+      <p>Mock Vehicle API · real-time position stream</p>
+    </div>
+    <nav class="nav" aria-label="Primary">
+      <a href="/">Dashboard</a>
+      <a href="/explorer" class="is-active">Explorer</a>
+      <a href="/about">About</a>
+    </nav>
+  </div>
+  <div class="header-right">
+    <a class="btn btn-ghost" href="/vehicles" target="_blank" rel="noopener">Raw JSON ↗</a>
+  </div>
+</header>
+
+<main class="app-main">
+  <section class="page-hero">
+    <h2>Vehicle Explorer</h2>
+    <p>Browse the 400 records served by <code>/vehicles</code>. Search below, click a card to view its raw JSON.</p>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <h2>All vehicles</h2>
+      <div class="panel-tools">
+        <div class="search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>
+          </svg>
+          <input id="q" type="search" placeholder="Search plate, driver, id…" aria-label="Search vehicles" />
+        </div>
+      </div>
+    </div>
+    <div style="padding:20px">
+      <div id="grid" class="card-grid"></div>
+      <div id="empty" class="empty" hidden>No matches.</div>
+    </div>
+  </section>
+
+  <section class="panel" style="margin-top:20px">
+    <div class="panel-head"><h2>Selected vehicle JSON</h2></div>
+    <div style="padding:20px">
+      <pre id="json" class="json">Click a vehicle card above to see its raw JSON here.</pre>
+    </div>
+  </section>
+</main>
+
+<footer class="app-footer">
+  <span>Mock API · <a href="/vehicles">/vehicles</a> · <a href="/positions">/positions</a></span>
+  <span>Explorer</span>
+</footer>
+
+<script>
+  const $ = s => document.querySelector(s);
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  let all = [];
+
+  function render(){
+    const q = ($('#q').value || '').trim().toLowerCase();
+    const list = q
+      ? all.filter(v =>
+          String(v.id).includes(q) ||
+          v.plate.toLowerCase().includes(q) ||
+          v.driver.toLowerCase().includes(q) ||
+          v.status.toLowerCase().includes(q))
+      : all;
+    $('#empty').hidden = list.length > 0;
+    $('#grid').innerHTML = list.slice(0, 200).map(v => `
+      <button class="v-card" data-id="${v.id}" style="text-align:left;cursor:pointer;font:inherit;color:inherit;background:var(--surface)">
+        <h4><span class="plate">${esc(v.plate)}</span></h4>
+        <div class="sub">#${v.id} · ${esc(v.driver)}</div>
+        <div class="row"><span>lat</span><span>${Number(v.lat).toFixed(5)}</span></div>
+        <div class="row"><span>lng</span><span>${Number(v.lng).toFixed(5)}</span></div>
+        <div class="row"><span>status</span><span class="badge s-${esc(v.status)}">${esc(v.status)}</span></div>
+      </button>
+    `).join('');
+  }
+
+  $('#grid').addEventListener('click', e => {
+    const card = e.target.closest('.v-card');
+    if (!card) return;
+    const v = all.find(x => x.id === Number(card.dataset.id));
+    if (!v) return;
+    $('#json').textContent = JSON.stringify(v, null, 2);
+    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+  });
+
+  $('#q').addEventListener('input', render);
+
+  fetch('/vehicles').then(r => r.json()).then(list => { all = list; render(); })
+    .catch(err => { $('#grid').innerHTML = '<div class="empty">Failed: ' + esc(err.message) + '</div>'; });
+</script>
+</body>
+</html>

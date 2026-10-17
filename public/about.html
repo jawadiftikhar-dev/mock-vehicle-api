@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>About · Fleet Live</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+<header class="app-header">
+  <div class="brand">
+    <a class="brand-logo" href="/" aria-label="Home">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+           stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 13h2l2-5h10l2 5h2"/><path d="M5 13v5h14v-5"/>
+        <circle cx="8" cy="18" r="2"/><circle cx="16" cy="18" r="2"/>
+      </svg>
+    </a>
+    <div>
+      <h1><a href="/">Fleet Live</a></h1>
+      <p>Mock Vehicle API · real-time position stream</p>
+    </div>
+    <nav class="nav" aria-label="Primary">
+      <a href="/">Dashboard</a>
+      <a href="/explorer">Explorer</a>
+      <a href="/about" class="is-active">About</a>
+    </nav>
+  </div>
+  <div class="header-right">
+    <a class="btn btn-ghost" href="/vehicles" target="_blank" rel="noopener">Raw JSON ↗</a>
+  </div>
+</header>
+
+<main class="app-main">
+  <section class="page-hero">
+    <h2>About this mock API</h2>
+    <p>A tiny Node server that generates 400 vehicles, serves them over REST, and streams position updates over Server-Sent Events. No databases, no third-party services.</p>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head"><h2>Endpoints</h2></div>
+    <div style="padding:20px">
+      <table class="doc-table">
+        <thead>
+          <tr><th>Method</th><th>Path</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>GET</td><td><code>/vehicles</code></td><td>All 400 vehicles. Supports <code>?_page=&_limit=</code>, <code>?status=active</code>, <code>?q=Smith</code>.</td></tr>
+          <tr><td>GET</td><td><code>/vehicles/:id</code></td><td>A single vehicle.</td></tr>
+          <tr><td>GET</td><td><code>/positions</code></td><td>SSE stream — a <code>position</code> event every 5 s with updated <code>lat</code>/<code>lng</code>.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="panel" style="margin-top:20px">
+    <div class="panel-head"><h2>Sample vehicle</h2></div>
+    <div style="padding:20px">
+      <pre class="json">{
+  "id": 1,
+  "plate": "AB-1234-CD",
+  "driver": "James Smith",
+  "status": "active",
+  "lat": 38.123456,
+  "lng": -97.654321
+}</pre>
+    </div>
+  </section>
+
+  <section class="panel" style="margin-top:20px">
+    <div class="panel-head"><h2>Sample SSE event</h2></div>
+    <div style="padding:20px">
+      <pre class="json">event: position
+data: {"id":42,"plate":"XY-9876-ZW","driver":"Mary Johnson",
+       "status":"idle","lat":38.124789,"lng":-97.653012,
+       "timestamp":"2024-01-01T12:00:05.000Z"}</pre>
+    </div>
+  </section>
+</main>
+
+<footer class="app-footer">
+  <span>Mock API · <a href="/vehicles">/vehicles</a> · <a href="/positions">/positions</a></span>
+  <span>About</span>
+</footer>
+</body>
+</html>
