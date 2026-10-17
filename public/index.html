@@ -4,13 +4,13 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Fleet Live · Mock Vehicle API</title>
-  <link rel="stylesheet" href="/styles.css" />
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
 
 <header class="app-header">
   <div class="brand">
-    <a class="brand-logo" href="/" aria-label="Home">
+    <a class="brand-logo" href="./" aria-label="Home">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
            stroke-linecap="round" stroke-linejoin="round">
         <path d="M3 13h2l2-5h10l2 5h2"/><path d="M5 13v5h14v-5"/>
@@ -18,13 +18,13 @@
       </svg>
     </a>
     <div>
-      <h1><a href="/">Fleet Live</a></h1>
+      <h1><a href="./">Fleet Live</a></h1>
       <p>Mock Vehicle API · real-time position stream</p>
     </div>
     <nav class="nav" aria-label="Primary">
-      <a href="/" class="is-active">Dashboard</a>
-      <a href="/explorer">Explorer</a>
-      <a href="/about">About</a>
+      <a href="./" class="is-active">Dashboard</a>
+      <a href="./explorer">Explorer</a>
+      <a href="./about">About</a>
     </nav>
   </div>
 
@@ -140,7 +140,7 @@
   </div>
 
 <footer class="app-footer">
-  <span>Mock API · <a href="/vehicles">/vehicles</a> · <a href="/vehicles/1">/vehicles/:id</a> · <a href="/positions">/positions</a></span>
+  <span>Mock API · <a href="./vehicles">/vehicles</a> · <a href="./vehicles/1">/vehicles/:id</a> · <a href="./positions">/positions</a></span>
   <span>Updates every 5 s</span>
 </footer>
 
@@ -163,6 +163,6 @@
 <!-- Toasts -->
 <div class="toast-stack" id="toastStack" aria-live="polite"></div>
 
-<script src="/app.js" defer></script>
+<script src="app.js" defer></script>
 </body>
 </html>
