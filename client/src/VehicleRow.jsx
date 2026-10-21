@@ -26,4 +26,19 @@ function VehicleRow({ vehicle, style }) {
   );
 }
 
-export default memo(VehicleRow);
+function areEqual(prev, next) {
+  // Skip re-render if the vehicle data and layout style are unchanged.
+  if (prev.style !== next.style) return false;   // react-window may pass a new style object
+  const a = prev.vehicle;
+  const b = next.vehicle;
+  return (
+    a.id === b.id &&
+    a.plate === b.plate &&
+    a.driver === b.driver &&
+    a.status === b.status &&
+    a.lat === b.lat &&
+    a.lng === b.lng
+  );
+}
+
+export default memo(VehicleRow, areEqual);

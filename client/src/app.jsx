@@ -1,43 +1,57 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import VehicleList from './VehicleList.jsx';
-
-const API = ''; // same-origin (Vite proxy → http://localhost:3000)
+import useVehicleUpdates from './useVehicleUpdates.jsx';
 
 export default function App() {
   const [vehicles, setVehicles] = useState([]);
   const [status, setStatus] = useState('loading'); // 'loading' | 'ready' | 'error'
-  const [live, setLive] = useState(false);
 
-  // Fetch once
+  // Fetch initial list once
   useEffect(() => {
     let cancelled = false;
-    fetch(`${API}/vehicles`)
+    fetch('/vehicles')
       .then(r => r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`)))
-      .then(list => { if (!cancelled) { setVehicles(list); setStatus('ready'); } })
-      .catch(err => { if (!cancelled) { console.error(err); setStatus('error'); } });
+      .then(list => {
+        if (cancelled) return;
+        setVehicles(list);
+        setStatus('ready');
+      })
+      .catch(err => {
+        if (cancelled) return;
+        console.error(err);
+        setStatus('error');
+      });
     return () => { cancelled = true; };
   }, []);
 
-  // Optional: subscribe to SSE to prove "keeps scroll position when new data arrives".
-  // We replace the array by id; VehicleList is memoized so React reconciles cheaply.
-  useEffect(() => {
-    const es = new EventSource(`${API}/positions`);
-    es.addEventListener('open', () => setLive(true));
-    es.addEventListener('error', () => setLive(false));
-    es.addEventListener('position', ev => {
-      try {
-        const v = JSON.parse(ev.data);
-        setVehicles(prev => {
-          const idx = prev.findIndex(x => x.id === v.id);
-          if (idx === -1) return prev;
-          const next = prev.slice();
-          next[idx] = { ...prev[idx], ...v };
-          return next;
-        });
-      } catch {}
+  // Stable callback (identity never changes) so the hook can ignore it in deps
+  const handleVehicleUpdate = useCallback(incoming => {
+    setVehicles(prev => {
+      // Find by id. For 400 items this is fine; if it ever grew we'd use a Map.
+      const idx = prev.findIndex(v => v.id === incoming.id);
+      if (idx === -1) return prev;
+
+      // No-op short-circuit: if nothing actually changed, don't churn state.
+      const prevV = prev[idx];
+      if (
+        prevV.lat === incoming.lat &&
+        prevV.lng === incoming.lng &&
+        prevV.status === incoming.status &&
+        prevV.driver === incoming.driver &&
+        prevV.plate === incoming.plate
+      ) {
+        return prev;
+      }
+
+      // Replace only the changed slot. All other object references stay
+      // identical, so React.memo(VehicleRow) skips them.
+      const next = prev.slice();
+      next[idx] = { ...prevV, ...incoming };
+      return next;
     });
-    return () => es.close();
   }, []);
+
+  const { status: sseStatus } = useVehicleUpdates(handleVehicleUpdate);
 
   return (
     <div className="app">
@@ -46,12 +60,12 @@ export default function App() {
           <h1>Vehicles</h1>
           <p className="sub">
             {status === 'ready'
-              ? `${vehicles.length} records · windowed with react-window`
+              ? `${vehicles.length} records · windowed with react-window · live via SSE`
               : status === 'loading' ? 'Loading…' : 'Failed to load'}
           </p>
         </div>
-        <span className={`live-pill ${live ? 'on' : 'off'}`}>
-          <span className="live-dot" /> {live ? 'Live' : 'Offline'}
+        <span className={`live-pill ${sseStatus === 'open' ? 'on' : 'off'}`}>
+          <span className="live-dot" /> {sseStatus}
         </span>
       </header>
 
