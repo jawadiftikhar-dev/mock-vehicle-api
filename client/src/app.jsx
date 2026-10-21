@@ -1,37 +1,35 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import VehicleList from './VehicleList.jsx';
-import useVehicleUpdates from './useVehicleUpdates.jsx';
+import useVehicleUpdates from './useVehicleUpdates.js';
+import useSearchParams from './useSearchParams.js';
+import StatusFilter from './StatusFilter.jsx';
+import SortControl from './SortControl.jsx';
+import { filterAndSort, normalizeStatus, normalizeSort } from './vehicleFilter.js';
 
 export default function App() {
   const [vehicles, setVehicles] = useState([]);
   const [status, setStatus] = useState('loading'); // 'loading' | 'ready' | 'error'
+
+  // URL is the source of truth for filter/sort
+  const [params, setParams] = useSearchParams();
+  const statusFilter = normalizeStatus(params.get('status'));
+  const sortDir      = normalizeSort(params.get('sort'));
 
   // Fetch initial list once
   useEffect(() => {
     let cancelled = false;
     fetch('/vehicles')
       .then(r => r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`)))
-      .then(list => {
-        if (cancelled) return;
-        setVehicles(list);
-        setStatus('ready');
-      })
-      .catch(err => {
-        if (cancelled) return;
-        console.error(err);
-        setStatus('error');
-      });
+      .then(list => { if (!cancelled) { setVehicles(list); setStatus('ready'); } })
+      .catch(err => { if (!cancelled) { console.error(err); setStatus('error'); } });
     return () => { cancelled = true; };
   }, []);
 
-  // Stable callback (identity never changes) so the hook can ignore it in deps
+  // SSE: replace exactly one slot (Task 3 logic, unchanged)
   const handleVehicleUpdate = useCallback(incoming => {
     setVehicles(prev => {
-      // Find by id. For 400 items this is fine; if it ever grew we'd use a Map.
       const idx = prev.findIndex(v => v.id === incoming.id);
       if (idx === -1) return prev;
-
-      // No-op short-circuit: if nothing actually changed, don't churn state.
       const prevV = prev[idx];
       if (
         prevV.lat === incoming.lat &&
@@ -39,19 +37,37 @@ export default function App() {
         prevV.status === incoming.status &&
         prevV.driver === incoming.driver &&
         prevV.plate === incoming.plate
-      ) {
-        return prev;
-      }
-
-      // Replace only the changed slot. All other object references stay
-      // identical, so React.memo(VehicleRow) skips them.
+      ) return prev;
       const next = prev.slice();
       next[idx] = { ...prevV, ...incoming };
       return next;
     });
   }, []);
-
   const { status: sseStatus } = useVehicleUpdates(handleVehicleUpdate);
+
+  // Derived list — recomputes only when the data or filter/sort changes
+  const visible = useMemo(
+    () => filterAndSort(vehicles, { status: statusFilter, sort: sortDir }),
+    [vehicles, statusFilter, sortDir],
+  );
+
+  const setStatusFilter = useCallback(value => {
+    setParams(prev => {
+      const next = new URLSearchParams(prev);
+      if (value === 'all') next.delete('status');
+      else next.set('status', value);
+      return next;
+    });
+  }, [setParams]);
+
+  const setSortDir = useCallback(value => {
+    setParams(prev => {
+      const next = new URLSearchParams(prev);
+      if (value === 'asc') next.delete('sort');
+      else next.set('sort', value);
+      return next;
+    });
+  }, [setParams]);
 
   return (
     <div className="app">
@@ -60,7 +76,7 @@ export default function App() {
           <h1>Vehicles</h1>
           <p className="sub">
             {status === 'ready'
-              ? `${vehicles.length} records · windowed with react-window · live via SSE`
+              ? `${visible.length} of ${vehicles.length} shown · windowed with react-window`
               : status === 'loading' ? 'Loading…' : 'Failed to load'}
           </p>
         </div>
@@ -69,15 +85,36 @@ export default function App() {
         </span>
       </header>
 
+      <section className="toolbar" role="toolbar" aria-label="Filters">
+        <StatusFilter value={statusFilter} onChange={setStatusFilter} />
+        <SortControl   value={sortDir}      onChange={setSortDir} />
+        <span className="url-echo" aria-live="polite">
+          <code>{buildSearchString(statusFilter, sortDir) || '(no filters)'}</code>
+        </span>
+      </section>
+
       <main className="app-main">
         {status === 'error' && (
           <div className="err">
             Could not reach the mock API. Start Task 1 with <code>npm start</code> in the repo root, then reload.
           </div>
         )}
-        {status === 'ready' && <VehicleList vehicles={vehicles} height={600} />}
+        {status === 'ready' && visible.length === 0 && (
+          <div className="empty">No vehicles match the current filter.</div>
+        )}
+        {status === 'ready' && visible.length > 0 && (
+          <VehicleList vehicles={visible} height={600} />
+        )}
         {status === 'loading' && <div className="skeleton" aria-hidden="true" />}
       </main>
     </div>
   );
+}
+
+function buildSearchString(status, sort) {
+  const p = new URLSearchParams();
+  if (status !== 'all') p.set('status', status);
+  if (sort !== 'asc')   p.set('sort', sort);
+  const s = p.toString();
+  return s ? '?' + s : '';
 }
