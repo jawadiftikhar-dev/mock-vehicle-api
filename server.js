@@ -22,6 +22,7 @@ const router = jsonServer.router(DATA_FILE);
 
 // --- SSE clients ---
 const sseClients = new Set();
+const actionsLog = [];   
 const readVehicles = () => JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
 const jitter = (v, d = 0.01) => +(v + (Math.random() * 2 - 1) * d).toFixed(6);
 
@@ -73,6 +74,7 @@ function serveStatic(req, res, pathname) {
 const server = http.createServer((req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Headers', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   if (req.method === 'OPTIONS') { res.writeHead(204); return res.end(); }
 
   const url = new URL(req.url, `http://${req.headers.host}`);
@@ -104,6 +106,33 @@ const server = http.createServer((req, res) => {
   }
   if (/\.(html|css|js|svg|ico)$/.test(p)) {
     return serveStatic(req, res, p);
+  }
+
+    // --- POST /actions : dummy queue-flush target (Task 5) ---
+  if (p === '/actions' && req.method === 'POST') {
+    let body = '';
+    req.on('data', chunk => { body += chunk; if (body.length > 64 * 1024) req.destroy(); });
+    req.on('end', () => {
+      let payload = null;
+      try { payload = JSON.parse(body); } catch {}
+      if (!payload || typeof payload !== 'object') {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({ error: 'Invalid JSON body' }));
+      }
+      const action = { ...payload, receivedAt: new Date().toISOString() };
+      actionsLog.push(action);
+      if (actionsLog.length > 200) actionsLog.shift();
+      console.log('POST /actions →', action);
+      res.writeHead(202, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: true, action }));
+    });
+    return;
+  }
+
+  // --- GET /actions : peek at what's been received (handy for review) ---
+  if (p === '/actions' && req.method === 'GET') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    return res.end(JSON.stringify(actionsLog, null, 2));
   }
 
   // REST via json-server

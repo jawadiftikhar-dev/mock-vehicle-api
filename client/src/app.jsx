@@ -1,21 +1,23 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import VehicleList from './VehicleList.jsx';
+import DetailPanel from './DetailPanel.jsx';
+import OfflineBanner from './OfflineBanner.jsx';
 import useVehicleUpdates from './useVehicleUpdates.js';
 import useSearchParams from './useSearchParams.js';
+import useOnlineQueue from './useOnlineQueue.js';
 import StatusFilter from './StatusFilter.jsx';
 import SortControl from './SortControl.jsx';
 import { filterAndSort, normalizeStatus, normalizeSort } from './vehicleFilter.js';
 
 export default function App() {
   const [vehicles, setVehicles] = useState([]);
-  const [status, setStatus] = useState('loading'); // 'loading' | 'ready' | 'error'
+  const [status, setStatus] = useState('loading');
+  const [selectedId, setSelectedId] = useState(null);
 
-  // URL is the source of truth for filter/sort
   const [params, setParams] = useSearchParams();
   const statusFilter = normalizeStatus(params.get('status'));
   const sortDir      = normalizeSort(params.get('sort'));
 
-  // Fetch initial list once
   useEffect(() => {
     let cancelled = false;
     fetch('/vehicles')
@@ -25,72 +27,101 @@ export default function App() {
     return () => { cancelled = true; };
   }, []);
 
-  // SSE: replace exactly one slot (Task 3 logic, unchanged)
   const handleVehicleUpdate = useCallback(incoming => {
     setVehicles(prev => {
       const idx = prev.findIndex(v => v.id === incoming.id);
       if (idx === -1) return prev;
-      const prevV = prev[idx];
-      if (
-        prevV.lat === incoming.lat &&
-        prevV.lng === incoming.lng &&
-        prevV.status === incoming.status &&
-        prevV.driver === incoming.driver &&
-        prevV.plate === incoming.plate
-      ) return prev;
+      const p = prev[idx];
+      if (p.lat === incoming.lat && p.lng === incoming.lng &&
+          p.status === incoming.status && p.driver === incoming.driver &&
+          p.plate === incoming.plate) return prev;
       const next = prev.slice();
-      next[idx] = { ...prevV, ...incoming };
+      next[idx] = { ...p, ...incoming };
       return next;
     });
   }, []);
-  const { status: sseStatus } = useVehicleUpdates(handleVehicleUpdate);
 
-  // Derived list — recomputes only when the data or filter/sort changes
+  const { online } = useVehicleUpdates(handleVehicleUpdate);
+  const { enqueue, pendingCount, syncStatus } = useOnlineQueue(online);
+
   const visible = useMemo(
     () => filterAndSort(vehicles, { status: statusFilter, sort: sortDir }),
     [vehicles, statusFilter, sortDir],
   );
 
-  const setStatusFilter = useCallback(value => {
-    setParams(prev => {
-      const next = new URLSearchParams(prev);
-      if (value === 'all') next.delete('status');
-      else next.set('status', value);
-      return next;
-    });
-  }, [setParams]);
+  const setStatusFilter = useCallback(v => setParams(prev => {
+    const n = new URLSearchParams(prev);
+    v === 'all' ? n.delete('status') : n.set('status', v);
+    return n;
+  }), [setParams]);
 
-  const setSortDir = useCallback(value => {
-    setParams(prev => {
-      const next = new URLSearchParams(prev);
-      if (value === 'asc') next.delete('sort');
-      else next.set('sort', value);
-      return next;
-    });
-  }, [setParams]);
+  const setSortDir = useCallback(v => setParams(prev => {
+    const n = new URLSearchParams(prev);
+    v === 'asc' ? n.delete('sort') : n.set('sort', v);
+    return n;
+  }), [setParams]);
+
+  const openRow = useCallback(id => setSelectedId(id), []);
+  const closePanel = useCallback(() => setSelectedId(null), []);
+
+  const selected = selectedId != null
+    ? vehicles.find(v => v.id === selectedId)
+    : null;
+
+  const markAttended = useCallback(async vehicle => {
+    const action = {
+      type: 'mark-attended',
+      vehicleId: vehicle.id,
+      plate: vehicle.plate,
+      at: new Date().toISOString(),
+    };
+    if (online) {
+      try {
+        const r = await fetch('/actions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(action),
+        });
+        if (!r.ok) throw new Error(r.status);
+      } catch (e) {
+        console.warn('direct POST failed, queueing', e);
+        await enqueue(action);
+      }
+    } else {
+      await enqueue(action);
+    }
+  }, [online, enqueue]);
 
   return (
     <div className="app">
+      <OfflineBanner
+        visible={!online}
+        pendingCount={pendingCount}
+        syncStatus={syncStatus}
+      />
+
       <header className="app-header">
         <div>
           <h1>Vehicles</h1>
           <p className="sub">
             {status === 'ready'
-              ? `${visible.length} of ${vehicles.length} shown · windowed with react-window`
+              ? `${visible.length} of ${vehicles.length} shown · windowed · live via SSE`
               : status === 'loading' ? 'Loading…' : 'Failed to load'}
           </p>
         </div>
-        <span className={`live-pill ${sseStatus === 'open' ? 'on' : 'off'}`}>
-          <span className="live-dot" /> {sseStatus}
+        <span className={`live-pill ${online ? 'on' : 'off'}`}>
+          <span className="live-dot" /> {online ? 'Live' : 'Offline'}
         </span>
       </header>
 
       <section className="toolbar" role="toolbar" aria-label="Filters">
         <StatusFilter value={statusFilter} onChange={setStatusFilter} />
         <SortControl   value={sortDir}      onChange={setSortDir} />
-        <span className="url-echo" aria-live="polite">
-          <code>{buildSearchString(statusFilter, sortDir) || '(no filters)'}</code>
-        </span>
+        {pendingCount > 0 && (
+          <span className="queue-pill" aria-live="polite">
+            {pendingCount} queued
+          </span>
+        )}
       </section>
 
       <main className="app-main">
@@ -103,18 +134,17 @@ export default function App() {
           <div className="empty">No vehicles match the current filter.</div>
         )}
         {status === 'ready' && visible.length > 0 && (
-          <VehicleList vehicles={visible} height={600} />
+          <VehicleList vehicles={visible} onOpen={openRow} height={600} />
         )}
         {status === 'loading' && <div className="skeleton" aria-hidden="true" />}
       </main>
+
+      <DetailPanel
+        vehicle={selected}
+        onClose={closePanel}
+        onMarkAttended={markAttended}
+        pendingCount={pendingCount}
+      />
     </div>
   );
-}
-
-function buildSearchString(status, sort) {
-  const p = new URLSearchParams();
-  if (status !== 'all') p.set('status', status);
-  if (sort !== 'asc')   p.set('sort', sort);
-  const s = p.toString();
-  return s ? '?' + s : '';
 }

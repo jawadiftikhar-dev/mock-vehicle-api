@@ -1,15 +1,19 @@
 import { memo } from 'react';
 import StatusIcon from './StatusIcon.jsx';
 
-function VehicleRow({ vehicle, style }) {
-  const { plate, driver, status, lat, lng } = vehicle;
-
+function VehicleRow({ vehicle, style, onOpen }) {
+  const { id, plate, driver, status, lat, lng } = vehicle;
   return (
     <div
       className="row"
       style={style}
-      role="listitem"
-      aria-label={`${plate}, driver ${driver}, status ${status}`}
+      role="button"
+      tabIndex={0}
+      aria-label={`Open details for ${plate}, driver ${driver}, status ${status}`}
+      onClick={() => onOpen(id)}
+      onKeyDown={e => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(id); }
+      }}
     >
       <span className="cell plate" aria-hidden="true">{plate}</span>
       <span className="cell driver">{driver}</span>
@@ -26,18 +30,14 @@ function VehicleRow({ vehicle, style }) {
   );
 }
 
+// Memoize on data only. `onOpen` should be stable (from App via useCallback)
+// so it never causes a re-render. Comparing fields is still required because
+// react-window hands the renderer a fresh style object each frame.
 function areEqual(prev, next) {
-  // Skip re-render if the vehicle data and layout style are unchanged.
-  if (prev.style !== next.style) return false;   // react-window may pass a new style object
-  const a = prev.vehicle;
-  const b = next.vehicle;
+  const a = prev.vehicle, b = next.vehicle;
   return (
-    a.id === b.id &&
-    a.plate === b.plate &&
-    a.driver === b.driver &&
-    a.status === b.status &&
-    a.lat === b.lat &&
-    a.lng === b.lng
+    a.id === b.id && a.plate === b.plate && a.driver === b.driver &&
+    a.status === b.status && a.lat === b.lat && a.lng === b.lng
   );
 }
 

@@ -4,27 +4,26 @@ import VehicleRow from './VehicleRow.jsx';
 
 const ROW_HEIGHT = 56;
 
-// Module-level renderer → same function identity across renders.
-// react-window calls it only for rows inside the viewport (+ overscan).
-function RowRenderer({ index, style, data }) {
-  return <VehicleRow vehicle={data[index]} style={style} />;
-}
+function VehicleList({ vehicles, onOpen, height = 600, itemHeight = ROW_HEIGHT }) {
+  // itemData carries both the array and the click handler so react-window
+  // can render without re-creating a renderer function per render.
+  const itemData = { vehicles, onOpen };
 
-function VehicleList({ vehicles, height = 600, itemHeight = ROW_HEIGHT }) {
+  function RowRenderer({ index, style, data }) {
+    const v = data.vehicles[index];
+    return <VehicleRow vehicle={v} style={style} onOpen={data.onOpen} />;
+  }
+
   return (
     <div className="vlist" role="region" aria-label="Vehicles">
       <div className="vlist-head" aria-hidden="true">
-        <span>Plate</span>
-        <span>Driver</span>
-        <span>Status</span>
-        <span>Coordinates</span>
+        <span>Plate</span><span>Driver</span><span>Status</span><span>Coordinates</span>
       </div>
-
       <List
         height={height}
         itemCount={vehicles.length}
         itemSize={itemHeight}
-        itemData={vehicles}
+        itemData={itemData}
         width="100%"
         overscanCount={6}
       >
