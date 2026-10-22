@@ -14,7 +14,7 @@ export default function useVehicleUpdates(onVehicleUpdate) {
     const connect = () => {
       if (disposed) return;
       setStatus(attempt === 0 ? 'connecting' : 'reconnecting');
-      es = new EventSource('/positions');
+      es = new EventSource(apiUrl('/positions'));
 
       es.addEventListener('open', () => { attempt = 0; setStatus('open'); });
       es.addEventListener('position', ev => {

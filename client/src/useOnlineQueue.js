@@ -53,7 +53,7 @@ export default function useOnlineQueue(isOnline) {
 
       for (const item of all) {
         const { id, ...payload } = item;  // strip IDB autoincrement id
-        const res = await fetch('/actions', {
+        const res = await fetch(apiUrl('/actions'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),

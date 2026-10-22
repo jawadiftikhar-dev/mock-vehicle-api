@@ -337,7 +337,7 @@
   });
 
   /* ---------- Load initial data ---------- */
-  fetch('/vehicles')
+  fetch(apiUrl('/vehicles'))
     .then(r => r.json())
     .then(list => {
       for (const v of list) state.vehicles.set(v.id, v);
@@ -348,7 +348,7 @@
     });
 
   /* ---------- SSE stream ---------- */
-  const es = new EventSource('/positions');
+  const es = new EventSource(apiUrl('/positions'));
 
   es.addEventListener('open', () => {
     connDot.className = 'conn-dot on';

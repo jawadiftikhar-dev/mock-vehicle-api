@@ -106,7 +106,7 @@
 
   $('#q').addEventListener('input', render);
 
-  fetch('/vehicles').then(r => r.json()).then(list => { all = list; render(); })
+  fetch(apiUrl('/vehicles')).then(r => r.json()).then(list => { all = list; render(); })
     .catch(err => { $('#grid').innerHTML = '<div class="empty">Failed: ' + esc(err.message) + '</div>'; });
 </script>
 </body>

@@ -20,7 +20,7 @@ export default function App() {
 
   useEffect(() => {
     let cancelled = false;
-    fetch('/vehicles')
+    fetch(apiUrl('/vehicles'))
       .then(r => r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`)))
       .then(list => { if (!cancelled) { setVehicles(list); setStatus('ready'); } })
       .catch(err => { if (!cancelled) { console.error(err); setStatus('error'); } });
@@ -77,7 +77,7 @@ export default function App() {
     };
     if (online) {
       try {
-        const r = await fetch('/actions', {
+        const r = await fetch(apiUrl('/actions'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(action),
