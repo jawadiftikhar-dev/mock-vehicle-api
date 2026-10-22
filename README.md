@@ -1,4 +1,9 @@
-# Mock Vehicle API — Fleet Live
+# Fleet Live — Mock Vehicle API + Virtualized React Dashboard
+
+A mock fleet tracker: a Node API serving **400 vehicles** over REST and a
+Server-Sent Events position stream, plus a React dashboard that renders them
+through `react-window` with live updates, filtering, sorting, a detail panel,
+and an offline action queue.
 
 Generates **400 realistic vehicles** and serves them over REST + a Server-Sent
 Events stream that emits a position change for a random vehicle every **5 s**.
@@ -6,6 +11,11 @@ Events stream that emits a position change for a random vehicle every **5 s**.
 Ships with a clean **light-mode live dashboard** (vanilla HTML/CSS/JS — no
 frameworks, no CDN) that shows the fleet, highlights rows as they move, and
 streams position updates in real time.
+
+**Live demo:** [{Live demo}](https://mock-vehicle-api.netlify.app/)
+**API:** {RENDER_URL}
+**Performance report:** [PERFORMANCE.md](./PERFORMANCE.md)
+**API reference:** [docs/API.md](./docs/API.md)
 
 ## Quick start (one command)
 
