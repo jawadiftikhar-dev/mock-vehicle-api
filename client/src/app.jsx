@@ -7,6 +7,7 @@ import useSearchParams from './useSearchParams.js';
 import useOnlineQueue from './useOnlineQueue.js';
 import StatusFilter from './StatusFilter.jsx';
 import SortControl from './SortControl.jsx';
+import { apiUrl } from './api.js';
 import { filterAndSort, normalizeStatus, normalizeSort } from './vehicleFilter.js';
 
 export default function App() {

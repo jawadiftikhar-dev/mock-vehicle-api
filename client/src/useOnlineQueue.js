@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { openDB } from 'idb';
+import { apiUrl } from './api.js';
 
 const DB_NAME = 'fleet';
 const STORE   = 'pending-actions';

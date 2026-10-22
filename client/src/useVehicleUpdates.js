@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { apiUrl } from './api.js';
 
 export default function useVehicleUpdates(onVehicleUpdate) {
   const [status, setStatus] = useState('connecting');
