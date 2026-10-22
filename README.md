@@ -13,7 +13,6 @@ frameworks, no CDN) that shows the fleet, highlights rows as they move, and
 streams position updates in real time.
 
 **Live demo:** [{Live demo}](https://mock-vehicle-api.netlify.app/)
-**API:** {RENDER_URL}
 **Performance report:** [PERFORMANCE.md](./PERFORMANCE.md)
 **API reference:** [docs/API.md](./docs/API.md)
 
